@@ -1,0 +1,52 @@
+.side-menus {
+    top:30px !important;
+    
+     /* Adjust the width as you prefer */
+    position: fixed; /* Fixed position */
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column !important; /* Stack items vertically */
+    padding-top: 20px; /* Padding at the top */
+    justify-content: space-between;
+    background-color:#008080;
+    border-radius:20px;
+}
+
+/* Style for menu items */
+.menu-item {
+    display: flex; /* Flexbox to align icon and text in a row */
+    flex-direction: row; /* Row alignment */
+    align-items: center; /* Vertically align icon and text */
+    padding: 15px 20px;
+    text-decoration: none; /* Remove underline from links */
+    color: white !important; /* Text color */
+    font-size: 18px;
+    transition: background 0.3s ease; /* Smooth hover effect */
+}
+
+/* Style for icons inside the menu */
+.menu-item i {
+    margin-right: auto; /* Space between icon and text */
+    font-size: 1.5rem;
+    margin-left:auto;
+
+}
+
+/* Hover effect for menu items */
+.menu-item:hover {
+    background-color: #575757; /* Darker background on hover */
+}
+inner_sidemenu_div{
+    display: flex;
+}
+
+/* Responsive (Optional) - Adjust the side menu width for smaller screens */
+@media (max-width: 768px) {
+    .side-menu {
+        width: 200px;
+    }
+}
+i{
+    color: white;
+}

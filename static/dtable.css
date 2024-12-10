@@ -1,0 +1,17 @@
+*{
+    font-family:'poppins'
+}
+th{
+    text-align: center;
+    
+    background-color:#00A9FF!important;
+    color:white;
+}
+tr{
+    text-align: center;
+}
+.heading{
+    text-align: center;
+    background-color:#00A9FF!important;
+    color:white;
+}
