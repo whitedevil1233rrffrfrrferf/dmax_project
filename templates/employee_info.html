@@ -9,116 +9,124 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <h1 style="text-align: center; background-color: #00A9FF; color: white; width:85%; margin-left: auto; margin-right: auto; margin-bottom: 3rem;">Employee Info</h1>
-    <div class="filter_div" style="margin-left:7rem;display: flex; gap: 2rem; align-items: center; margin-bottom: 1rem;">
-        <div >
-            <label for="designation">Designation</label>
-                <select name="designation" id="designation">
-                    <option value="" selected disabled>Select</option>
-                    <option value="sr_qa_Engineer">Sr. QA Engineer</option>
-                    <option value="jr_qa_engineer">Jr. QA Engineer</option>
-                    <option value="intern">Intern</option>
-                    <option value="qa_lead">QA Lead</option>
-                    
+    <div style="display: flex; gap:4rem;">
+        <div>
+            {% include 'sidemenu.html' %}
+        </div>
+        <div style="flex: 1;">
+            <h1 style="text-align: center; background-color: #00A9FF; color: white; width:85%; margin-left: auto; margin-right: auto; margin-bottom: 3rem;">Employee Info</h1>
+        <div class="filter_div" style="margin-left:7rem;display: flex; gap: 2rem; align-items: center; margin-bottom: 1rem;">
+            <div >
+                <label for="designation">Designation</label>
+                    <select name="designation" id="designation">
+                        <option value="" selected disabled>Select</option>
+                        <option value="sr_qa_Engineer">Sr. QA Engineer</option>
+                        <option value="jr_qa_engineer">Jr. QA Engineer</option>
+                        <option value="intern">Intern</option>
+                        <option value="qa_lead">QA Lead</option>
                         
-                </select>
-        </div>
-        <div >
-            <label for="project">Project</label>
-                <select name="project" id="project">
-                    <option value="ips">IPS</option>
-                    <option value="fora_travels">Fora Travels</option>
-                    <option value="akriyan">Akriyan</option>
-                    <option value="">Intern</option>
-                    
-    
-                </select>
-        </div>
-    </div>
-    <!-- <form action="/employee_info" enctype="multipart/form-data" method="POST">
+                            
+                    </select>
+            </div>
+            <div >
+                <label for="project">Project</label>
+                    <select name="project" id="project">
+                        <option value="ips">IPS</option>
+                        <option value="fora_travels">Fora Travels</option>
+                        <option value="akriyan">Akriyan</option>
+                        <option value="">Intern</option>
+                        
         
-        <label for="file" class="label">Upload Excel File:</label>
-        <input type="file" id="file" name="file"  accept=".xlsx" required >
-        <button type="submit" class="btn btn-primary submit" >Upload</button>
-    </form> -->
-    <div class="table my-9">
-        <table class="table highlighted_row">
-            <thead>
-                <th scope="col" class="table_header">ID</th>
-                <th scope="col" class="table_header">Name</th>
-                <th scope="col" class="table_header">Employee ID</th>
-                <th scope="col" class="table_header">Email</th>
-                <th scope="col" class="table_header">Date</th>
-                <th scope="col" class="table_header">Project</th>
-                <th scope="col" class="table_header">Designation</th>
-                <th scope="col" class="table_header">Rep manager</th>
-                <th scope="col" class="table_header">Edit</th>
-            </thead>
-            <tbody>
-                {% for employee in employees %}
-                <tr>
-                    <td>{{ employee.id }}</td>
-                    <td>{{ employee.emp_name }}</td>
-                    <td>{{ employee.emp_id }}</td>
-                    <td class="email-cell">{{ employee.emp_email }}</td>
-                    <td>{{ employee.emp_date }}</td>
-                    <td>{{ employee.emp_project }}</td>
-                    <td>{{ employee.emp_designation }}</td>
-                    <td>{{ employee.reporting_manager }}</td>
-                    <td><a href="{{ url_for('edit_employee', employee_id=employee.id) }}"><i class="fas fa-edit" style="color: blue;"></i></a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    
-    <!-- <div class="table my-9">
-        <table class="table highlighted_row">
+                    </select>
+            </div>
+        </div>
+        <!-- <form action="/employee_info" enctype="multipart/form-data" method="POST">
             
-            <thead>
-                <tr>
-                    <th class="table_header">ID</th>
-                    <th class="table_header">Name</th>
-                    <th class="table_header">Employee ID</th>
-                    <th class="table_header">Email</th>
-                    <th class="table_header">Date</th>
-                    <th class="table_header">Project</th>
-                    <th class="table_header">Designation</th>
-                    <th class="table_header">Rep manager</th>
-                    <th class="table_header">Edit</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for employee in employees %}
-                <tr>
-                    <td>{{ employee.id }}</td>
-                    <td>{{ employee.emp_name }}</td>
-                    <td>{{ employee.emp_id }}</td>
-                    <td>{{ employee.emp_email }}</td>
-                    <td>{{ employee.emp_date }}</td>
-                    <td>{{ employee.emp_project }}</td>
-                    <td>{{ employee.emp_designation }}</td>
-                    <td>{{ employee.reporting_manager }}</td>
-                    <td><a href="{{ url_for('edit_employee', employee_id=employee.id) }}"><i class="fas fa-edit" style="color: blue;"></i></a></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table> -->
-        <div style="display: flex; align-items: center;margin-top: 3rem !important; gap: 2rem;">
-            <a style="margin-left:45%; " href="{{url_for('employee_upload')}}">
-                <button class="btn btn-primary" style="width: 6rem; height:2.8rem;">Upload</button>
-            </a>
-            <a class="btn btn-outline-secondary" href="{{url_for('home')}}" style="width: 6rem; height:2.8rem;"><div style="display: flex; justify-content: space-between; padding:5px;">
-                <div>
-                  <i class="fa-solid fa-backward" ></i>
-                </div>
-                <div>
-                  Back
-                </div>
-              </div></a>
+            <label for="file" class="label">Upload Excel File:</label>
+            <input type="file" id="file" name="file"  accept=".xlsx" required >
+            <button type="submit" class="btn btn-primary submit" >Upload</button>
+        </form> -->
+        <div class="table my-9">
+            <table class="table highlighted_row">
+                <thead>
+                    <th scope="col" class="table_header">ID</th>
+                    <th scope="col" class="table_header">Name</th>
+                    <th scope="col" class="table_header">Employee ID</th>
+                    <th scope="col" class="table_header">Email</th>
+                    <th scope="col" class="table_header">Date</th>
+                    <th scope="col" class="table_header">Project</th>
+                    <th scope="col" class="table_header">Designation</th>
+                    <th scope="col" class="table_header">Rep manager</th>
+                    <th scope="col" class="table_header">Edit</th>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td>{{ employee.id }}</td>
+                        <td>{{ employee.emp_name }}</td>
+                        <td>{{ employee.emp_id }}</td>
+                        <td class="email-cell">{{ employee.emp_email }}</td>
+                        <td>{{ employee.emp_date }}</td>
+                        <td>{{ employee.emp_project }}</td>
+                        <td>{{ employee.emp_designation }}</td>
+                        <td>{{ employee.reporting_manager }}</td>
+                        <td><a href="{{ url_for('edit_employee', employee_id=employee.id) }}"><i class="fas fa-edit" style="color: blue;"></i></a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
         
+        <!-- <div class="table my-9">
+            <table class="table highlighted_row">
+                
+                <thead>
+                    <tr>
+                        <th class="table_header">ID</th>
+                        <th class="table_header">Name</th>
+                        <th class="table_header">Employee ID</th>
+                        <th class="table_header">Email</th>
+                        <th class="table_header">Date</th>
+                        <th class="table_header">Project</th>
+                        <th class="table_header">Designation</th>
+                        <th class="table_header">Rep manager</th>
+                        <th class="table_header">Edit</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td>{{ employee.id }}</td>
+                        <td>{{ employee.emp_name }}</td>
+                        <td>{{ employee.emp_id }}</td>
+                        <td>{{ employee.emp_email }}</td>
+                        <td>{{ employee.emp_date }}</td>
+                        <td>{{ employee.emp_project }}</td>
+                        <td>{{ employee.emp_designation }}</td>
+                        <td>{{ employee.reporting_manager }}</td>
+                        <td><a href="{{ url_for('edit_employee', employee_id=employee.id) }}"><i class="fas fa-edit" style="color: blue;"></i></a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table> -->
+            <div style="display: flex; align-items: center;margin-top: 3rem !important; gap: 2rem;">
+                <a style="margin-left:45%; " href="{{url_for('employee_upload')}}">
+                    <button class="btn btn-primary" style="width: 6rem; height:2.8rem;">Upload</button>
+                </a>
+                <a class="btn btn-outline-secondary" href="{{url_for('home')}}" style="width: 6rem; height:2.8rem;"><div style="display: flex; justify-content: space-between; padding:5px;">
+                    <div>
+                      <i class="fa-solid fa-backward" ></i>
+                    </div>
+                    <div>
+                      Back
+                    </div>
+                  </div></a>
+            </div>
+            
+        </div>
     </div>
+    
+    
     
 </body>
 </html>

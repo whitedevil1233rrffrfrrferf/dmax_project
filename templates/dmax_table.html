@@ -7,83 +7,144 @@
     <!-- Include Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://kit.fontawesome.com/9fe3d1bfff.js" crossorigin="anonymous"></script>
+    
+    
     <link rel="stylesheet" href="{{ url_for('static', filename='dtable.css') }}">
+    
+    
 </head>
 <body>
-    <div >
-        
-        <h2 class="mb-4 heading" style="margin-top: 2rem;">Dashboard</h2>
-        <center>
+    <div style="display: flex; justify-content: space-between;">
+        <div >
+            {% include 'sidemenu.html' %}
+        </div>
+        <div style="flex:1; ">
+            <div>
             
-            <form class="d-flex col-8 my-2" action="{{ url_for('dmax_table') }}" role="search" method="GET">
-                <input class="form-control me-2" type="search"  placeholder="Search by Name" name="search_term" id="search_term" aria-label="Search" value="{{ search_term }}" style="margin-right:2rem!important;">
-                <button class="btn btn-primary" type="submit" >Search</button>
-                <button type="button" class="btn btn-danger" onclick="clearSearch()" style="margin-left: 2rem;">Clear</button>
-            </form>
-        </center>
-        <div>
-
-        </div>
-        <!-- Bootstrap Table (Horizontal) -->
-        <table class="table table-bordered table-striped" style="margin-top: 2rem;">
-            <thead>
-                <tr>
-                    <!-- Loop through the column names to create table headers -->
-                    {% if data_list %}
-                        {% for field in data_list[0].keys() %}
-                        <th>{{ field }}</th>
-                        {% endfor %}
-                    {% endif %}
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Loop through the data list to create rows for each entry -->
-                {% for row in data_list %}
-                <tr>
-                    <!-- Loop through each value in the current row to create table cells -->
-                    {% for value in row.values() %}
-                    <td>{{ value }}</td>
+                <h2 class="mb-4 heading" >Dashboard</h2>
+                
+                <center>
+                    
+                    <form class="d-flex col-9 my-2" action="{{ url_for('dmax_table') }}" role="search" method="GET" style="">
+                        <input class="form-control me-2" type="search"  placeholder="Search by Name" name="search_term" id="search_term" aria-label="Search" value="{{ search_term }}" style="margin-right:2rem!important;">
+                        <button class="btn btn-primary" type="submit" >Search</button>
+                        <button type="button" class="btn btn-danger" onclick="clearSearch()" style="margin-left: 2rem;">Clear</button>
+                    </form>
+                </center>
+                <div class="filter_div" style="margin-bottom:30px; margin-top:3%;">
+                    <div>
+                        <label for="designation">Designation: </label>
+                        <select id="designation" onchange="handleFilters()">
+                            <option value="" selected >Select</option>
+                            {% for designation in designations %}
+                                <option value="{{ designation }}" {% if designation == selected_designation %}selected{% endif %}>{{ designation }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="project">Project: </label>
+                        <select id="project" onchange="handleFilters()">
+                            <option value="" selected >Select</option>
+                            {% for project in projects %}
+                                <option value="{{ project }}" {% if project == selected_project %}selected{% endif %}>{{ project }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>  
+                    <div>
+                        <label for="month">Month :</label>
+                        
+                        <select id="month" onchange="handleFilters()">
+                            <option value="" selected>Select Month</option>
+                            <option value="1" {% if selected_month == '1' %}selected{% endif %}>January</option>
+                            <option value="2" {% if selected_month == '2' %}selected{% endif %}>February</option>
+                            <option value="3" {% if selected_month == '3' %}selected{% endif %}>March</option>
+                            <option value="4" {% if selected_month == '4' %}selected{% endif %}>April</option>
+                            <option value="5" {% if selected_month == '5' %}selected{% endif %}>May</option>
+                            <option value="6" {% if selected_month == '6' %}selected{% endif %}>June</option>
+                            <option value="7" {% if selected_month == '7' %}selected{% endif %}>July</option>
+                            <option value="8" {% if selected_month == '8' %}selected{% endif %}>August</option>
+                            <option value="9" {% if selected_month == '9' %}selected{% endif %}>September</option>
+                            <option value="10" {% if selected_month == '10' %}selected{% endif %}>October</option>
+                            <option value="11" {% if selected_month == '11' %}selected{% endif %}>November</option>
+                            <option value="12" {% if selected_month == '12' %}selected{% endif %}>December</option>
+                        </select>
+                    </div>
+                </div>
+                
+        
+                </div>
+                <div style="display: flex; flex-direction: column;margin-left:15%;">
+                    <div class="graphBox">
+                    
+                        <div class="box">
+                            <canvas id="myChart" >
+                                
+                            </canvas>
+                        </div>
+                        <div class="box">
+                            <canvas id="earning"></canvas>
+                        </div>
+                    </div>
+                    <!-- Bootstrap Table (Horizontal) -->
+                    <div>
+                        <table class="table table-bordered table-striped" style="margin-top: 2rem;width: 75%;">
+                            <thead>
+                                <tr>
+                                    <!-- Loop through the column names to create table headers -->
+                                    {% if data_list %}
+                                        {% for field in data_list[0].keys() %}
+                                        <th>{{ field }}</th>
+                                        {% endfor %}
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Loop through the data list to create rows for each entry -->
+                                {% for row in data_list %}
+                                <tr>
+                                    <!-- Loop through each value in the current row to create table cells -->
+                                    {% for value in row.values() %}
+                                    <td>{{ value }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            
+            <div style="display: flex; align-items: center; gap: 2rem; margin-left: 40%;">
+                <div id="paginationLinks" style="margin-top:1.5rem;">
+                    {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                        {% if page_num %}
+                            {% if pagination.page == page_num %}
+                                <a class="btn btn-primary mb-4" href="{{ url_for('dmax_table', page=page_num, page_size=page_size, search_term=search_term) }}">{{ page_num }}</a>
+                            {% else %}
+                                <a class="btn btn-outline-secondary mb-4" href="{{ url_for('dmax_table', page=page_num, page_size=page_size, search_term=search_term) }}">{{ page_num }}</a>
+                            {% endif %}
+                        {% else %}
+                            ...
+                        {% endif %}
                     {% endfor %}
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div style="display: flex; align-items: center; gap: 2rem; margin-left: 40%;">
-        <div id="paginationLinks" style="margin-top:1.5rem;">
-            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
-                {% if page_num %}
-                    {% if pagination.page == page_num %}
-                        <a class="btn btn-primary mb-4" href="{{ url_for('dmax_table', page=page_num, page_size=page_size, search_term=search_term) }}">{{ page_num }}</a>
-                    {% else %}
-                        <a class="btn btn-outline-secondary mb-4" href="{{ url_for('dmax_table', page=page_num, page_size=page_size, search_term=search_term) }}">{{ page_num }}</a>
-                    {% endif %}
-                {% else %}
-                    ...
-                {% endif %}
-            {% endfor %}
+                </div>
+                <div>
+                    <form method="POST" style="margin-bottom: 0;">
+                        <label for="page_size">Select Page Size:</label>
+                        <select name="page_size" id="page_size" onchange="this.form.submit()" style="width:5rem;">
+                            {% for option in page_size_options %}
+                                <option value="{{ option }}" {% if option == page_size %}selected{% endif %}>{{ option }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="hidden" name="search_term" value="{{ search_term }}">
+                        <input type="hidden" name="page" value="{{ pagination.page }}">
+                    </form>
+            </div>
+            </div>
         </div>
-        <div>
-            <form method="POST" style="margin-bottom: 0;">
-                <label for="page_size">Select Page Size:</label>
-                <select name="page_size" id="page_size" onchange="this.form.submit()" style="width:5rem;">
-                    {% for option in page_size_options %}
-                        <option value="{{ option }}" {% if option == page_size %}selected{% endif %}>{{ option }}</option>
-                    {% endfor %}
-                </select>
-                <input type="hidden" name="search_term" value="{{ search_term }}">
-                <input type="hidden" name="page" value="{{ pagination.page }}">
-            </form>
     </div>
-    </div>
-    <a class="btn btn-outline-secondary" href="{{url_for('home')}}" style=" padding:10px ;margin-top:30px; margin-left:40%;"><div style="display: flex; justify-content: space-between; padding:5px;">
-        <div>
-          <i class="fa-solid fa-backward" style="margin-right: 10px;"></i>
-        </div>
-        <div>
-          Back
-        </div>
-      </div></a>
+    
+    
+    
     <script>
         function clearSearch() {
           const searchInput = document.querySelector('input[name="search_term"]');
@@ -92,8 +153,21 @@
       }
   
     </script>  
+    
     <!-- Include Bootstrap JS and dependencies (optional for interactive components) -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script>
+        const dmaxUrl = "{{ url_for('dmax_table') }}";
+    </script>
+    <script>
+        const chartData = {{ chart_data | tojson }};
+        const desig_name = {{ labels | tojson }};
+        const desig_Scores = {{ scores | tojson }};
+    </script>
+    
+    <script src="{{ url_for('static', filename='my_chart.js') }}"></script>
+    <script src="{{ url_for('static', filename='d_table.js') }}"></script>
 </body>
 </html>

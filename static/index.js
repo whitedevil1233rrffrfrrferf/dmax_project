@@ -6,33 +6,35 @@ function debounce(func, delay) {
     };
 }
 function showAlert() {
-    var employeeId = document.getElementById('employee_id').value;
+    var employeeName = document.getElementById('employee_name').value;
+    
     
 }
-document.getElementById('employee_id').addEventListener('input', debounce(showAlert, 2000));
+document.getElementById('employee_name').addEventListener('input', debounce(showAlert, 2000));
 function searchEmployee(){
     
-        var employeeId = document.getElementById('employee_id').value;
+        var employeeName = document.getElementById('employee_name').value;
         
         // Send an Axios POST request
         axios.post('/search', {
-            employee_id: employeeId
+            employee_name: employeeName
         })
         .then(function (response) {
             var employees = response.data.employees;
             
-            var listHtml = '<h3>Select an Employee</h3><ul>';
+            var listHtml = '';
             
             if (employees.length > 0) {
                 employees.forEach(function(employee) {
                     console.log("Employee details:", employee);
                     var employeeDetails = JSON.stringify(employee)  // Convert the employee object to a string for use in `onclick`
                     console.log("Employee details stringified:", employeeDetails);
-                    listHtml += `<li>
-                                    <a href="#" data-employee='${encodeURIComponent(employeeDetails)}' onclick="selectEmployee(this)">
-                                        ${employee.employee_name} (${employee.employee_id})
-                                    </a>
-                                 </li>`;
+                    var listItemStyle = "list-style: none ; color: black;";
+                    listHtml += `<a href="#" data-employee='${encodeURIComponent(employeeDetails)}' onclick="selectEmployee(this)"><li style="${listItemStyle}">
+                                    
+                                    ${employee.employee_name} (${employee.employee_id})
+                                    
+                                 </li> </a>`;
                 });
             } else {
                 listHtml += '<li>No employees found</li>';
@@ -51,7 +53,7 @@ function searchEmployee(){
         });
     
 }
-document.getElementById('employee_id').addEventListener('input', debounce(searchEmployee, 1000));
+document.getElementById('employee_name').addEventListener('input', debounce(searchEmployee, 1000));
 
     // Function to handle when an employee is clicked
 // Function to handle when an employee is clicked
@@ -147,5 +149,13 @@ function toggleDesignationTable(){
         newinit.style.display=""
     }
 }
+
+document.getElementById("myForm").addEventListener("keydown", function(event) {
+    // Prevent form submission on Enter key
+    if (event.key === "Enter") {
+        event.preventDefault();  // Prevent form submission
+        document.getElementById("employee-list").style.display = "none"; // Hide datalist
+    }
+});
      
 

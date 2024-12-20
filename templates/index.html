@@ -20,16 +20,30 @@
                     <h3 class="secondary_heading">Basic Information</h3>
                     <div class="flex_first_div">
                         
-                            <div class="inside_flex_div">
-                                <label for="employee-name" class="ipt_label">Employee Name:</label>
-                                <input type="text" id="employee_name" name="employee_name" required class="ipt" value="XXX">
+                            <div class="inside_flex_div_2">
+                                <div class="inside_flex_div">
+                                    <label for="employee_name" class="ipt_label">Employee Name:</label>
+                                    <div class="inside_flex_div_2">
+                                        <input type="text" id="employee_name" name="employee_name" required class="ipt" value="XXX">
+                                        <datalist id="employee-list" style="border: 1px solid #ccc; padding: 10px; display:none;   " class="suggestion-list"></datalist>
+                                    </div>
+                                </div>
+                                
+                                
     
                                 
                             </div>
-                            <div class="inside_flex_div">
-                                <label for="employee-id" class="ipt_label">Employee ID:</label>
-                                <input type="text" id="employee_id" name="employee_id" required class="ipt" value="DC0000">
-                                <div id="employee-list" style="border: 1px solid #ccc; padding: 10px; display:none; width:11rem; max-height:10rem; overflow-y: auto;"></div>
+                            <div class="inside_flex_div_2" >
+                                <div class="inside_flex_div">
+                                    <label for="employee-id" class="ipt_label">Employee ID:</label>
+                                    <div class="inside_flex_div_2">
+                                        <input type="text" id="employee_id" name="employee_id" required class="ipt" value="DC0000" >
+                                        
+                                    </div>
+                                    
+                                </div>
+                                
+                                
                             </div>
                             
                         
@@ -69,11 +83,11 @@
                             <label for="designation" class="two_label">Select your :<br> Designation</label>
                             <select id="designation" name="designation" class="desg_Sel select" required onchange="toggleDesignationTable()">
                                 <option disabled selected>Please select your Designation</option>
-                                <option value="intern">Intern</option>
-                                <option value="jr_qa_engineer">Jr.QA Engineer</option>
-                                <option value="qa_engineer">QA Engineer</option>
-                                <option value="sr_qa_engineer">Sr.QA Engineer</option>
-                                <option value="qa_lead">QA Lead</option>
+                                <option value="Intern">Intern</option>
+                                <option value="Jr.QA Engineer">Jr.QA Engineer</option>
+                                <option value="QA Engineer">QA Engineer</option>
+                                <option value="Sr.QA Engineer">Sr.QA Engineer</option>
+                                <option value="QA Lead">QA Lead</option>
                             </select>
                         </div>
     

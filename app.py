@@ -180,6 +180,39 @@ def get_logged_in_user_details():
     # If no user is found, return None or an appropriate message
     return None
 
+def get_filtered_employees(base_query, search_query, selected_month, selected_date):
+    if search_query:
+        base_query = base_query.filter(func.lower(Dform.employee_name) == search_query)
+    if selected_month:
+        base_query = base_query.filter(extract('month', Dform.today_date) == int(selected_month))
+    if selected_date:
+        base_query = base_query.filter_by(today_date=selected_date)
+    return base_query.all()
+
+@app.context_processor
+def custom_global_variable():
+    role = None
+
+    # Check if the user is logged in (email is in session)
+    if 'email' in session:
+        user_email = session['email']
+
+        # Query the user role from the database
+        user = Employee.query.filter_by(email=user_email).first()
+        if user:
+            role = user.role  # Assuming `role` is a column in your User model
+            print("role",role)
+
+    if 'username' in session :
+        username = session['username']
+        user = Employee.query.filter_by(emp_id=username).first()
+        if user:
+            role=user.role
+            print("role",user)         
+    # Return the role to all templates as a global variable
+    return {'user_role': role}
+
+
 @app.route('/form',methods=["GET","POST"])
 def home():
     if 'username' in session :
@@ -423,13 +456,15 @@ def sign():
             role=employee.role
             if role=="super_admin":
                 return redirect(url_for('dmax_table'))
+            if role=="admin":
+                return redirect(url_for('dmax_table'))
             if role=="manager":
                 return redirect(url_for('home'))
             if role=="crewmate":
                 return redirect(url_for('view_dscore'))
 
         else:
-            print("invalid credentials")
+            flash("Invalid credentials. Please try again!", "danger")
         
         
     return render_template('sign.html')     
@@ -459,13 +494,22 @@ def google_sign_in():
     response = requests.get('https://www.googleapis.com/oauth2/v3/userinfo', headers={'Authorization': f'Bearer {credentials.token}'})
     if response.status_code == 200:
         user_info = response.json()
-        user_email = user_info.get('email')  # Extract email from the response
         
+        user_email = user_info.get('email')  # Extract email from the response
+        employee = Employee.query.filter_by(email=user_email).first()
+        if not employee:
+            flash("Invalid credentials. Please try again!", "danger")
+            return redirect(url_for('sign'))
         # Store the email in the session or perform any other actions
         session['email'] = user_email
+        if employee.role == 'crewmate':
+            return redirect(url_for('view_dscore'))
+        if employee.role=='super_admin' or employee.role=="admin":
+            return redirect(url_for('dmax_table'))
         
     else:
         print("Failed to fetch user info")
+        
     return redirect("/form")
     
 @app.route('/read_excel')
@@ -489,16 +533,21 @@ def read_excel():
 @app.route('/search', methods=['POST'])
 def search_employee():
     data = request.json
-    employee_id = data.get('employee_id')
+    employee_name = data.get('employee_name')
+    logged_in_user = get_logged_in_user_details()
+    logged_in_user_role = logged_in_user.get("role")
+    logged_in_user_name = logged_in_user.get("name")
     
+    employees_list = []
     # Query the Login table where employee_name matches (case-insensitive search)
-    matched_employees = Dform.query.filter(Dform.employee_id.ilike(f'%{employee_id}%')).all() 
-
+    matched_employees = Dform.query.filter(Dform.employee_name.ilike(f'%{employee_name}%')).all() 
+    for emp in matched_employees:
+        employee_info=Employee_information.query.filter(Employee_information.emp_id == emp.employee_id).first()
     # Create a list of dictionaries containing employee details
-    employees_list = [
-        {column.name: getattr(emp, column.name) for column in Dform.__table__.columns}
-        for emp in matched_employees
-    ]
+        if employee_info and employee_info.reporting_manager == logged_in_user_name:
+            # Include employee details in the response if the employee's reporting manager matches
+            employee_details = {column.name: getattr(emp, column.name) for column in Dform.__table__.columns}
+            employees_list.append(employee_details)
     
     return jsonify({"employees": employees_list})
 
@@ -534,46 +583,7 @@ def logout():
 
 @app.route("/employee_info",methods=["GET","POST"])
 def employee_info():
-    if request.method=="POST":
         
-        file = request.files['file']  # Get the uploaded file
-
-        # Load the workbook directly from the file object
-        wb = load_workbook(file)  # No need for BytesIO here
-        ws = wb.active
-
-        # Process the rows and add to the database
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            emp_name, emp_id, emp_email, emp_date, emp_project, emp_designation ,reporting_manager= row
-            if isinstance(emp_date, datetime):
-                emp_date = emp_date.date()  # Removes the time and keeps only the date
-                print("Date without time:", emp_date)
-
-            # If emp_date is a string, convert it to a date object
-            elif isinstance(emp_date, str):
-                try:
-                    emp_date = datetime.strptime(emp_date, '%Y-%m-%d').date()  # Convert to date
-                    print("Successfully parsed the date:", emp_date)
-                except ValueError:
-                    print("Incorrect date format")
-                    emp_date = None 
-
-            # Create new employee object
-            employee = Employee_information(
-                emp_name=emp_name,
-                emp_id=emp_id,
-                emp_email=emp_email,
-                emp_date=emp_date,
-                emp_project=emp_project,
-                emp_designation=emp_designation,
-                reporting_manager=reporting_manager
-            )
-
-            # Add the employee record to the session
-            db.session.add(employee)
-        
-        # Commit all changes to the database
-        db.session.commit()     
 
     employees = Employee_information.query.all()
 
@@ -606,8 +616,54 @@ def edit_employee(employee_id):
 
 
 
-@app.route("/employee_upload")
+@app.route("/employee_upload" ,methods=['GET', 'POST'])
 def employee_upload():
+    if request.method=="POST":
+        
+        file = request.files['file']  # Get the uploaded file
+
+        # Load the workbook directly from the file object
+        wb = load_workbook(file)  # No need for BytesIO here
+        ws = wb.active
+
+        # Process the rows and add to the database
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            emp_name, emp_id, emp_email, emp_date, emp_project, emp_designation ,reporting_manager= row
+            if isinstance(emp_date, datetime):
+                emp_date = emp_date.date()  # Removes the time and keeps only the date
+                print("Date without time:", emp_date)
+
+            # If emp_date is a string, convert it to a date object
+            elif isinstance(emp_date, str):
+                try:
+                    emp_date = datetime.strptime(emp_date, '%Y-%m-%d').date()  # Convert to date
+                    print("Successfully parsed the date:", emp_date)
+                except ValueError:
+                    print("Incorrect date format")
+                    emp_date = None     
+            name_exists = db.session.query(
+                db.session.query(Employee_information).filter_by(emp_name=emp_name).exists()
+            ).scalar()
+
+            if name_exists:
+                print(f"Employee with name '{emp_name}' already exists. Skipping entry.")
+                continue
+            # Create new employee object
+            employee = Employee_information(
+                emp_name=emp_name,
+                emp_id=emp_id,
+                emp_email=emp_email,
+                emp_date=emp_date,
+                emp_project=emp_project,
+                emp_designation=emp_designation,
+                reporting_manager=reporting_manager
+            )
+
+            # Add the employee record to the session
+            db.session.add(employee)
+        
+        # Commit all changes to the database
+        db.session.commit() 
     return render_template("employee_upload.html")
 
 @app.route("/dmax_table", methods=["GET", "POST"])
@@ -623,21 +679,36 @@ def dmax_table():
             session['page_size'] = int(selected_page_size)
         # Redirect to page 1 with the current search term to avoid form resubmission
         return redirect(url_for('dmax_table', page=1, search_term=request.args.get('search_term', '')))
-    
+    designation_counts = (
+        db.session.query(Employee_information.emp_designation, func.count(Employee_information.emp_designation))
+        .group_by(Employee_information.emp_designation)
+        .all()
+    )
+    labels = [row[0] for row in designation_counts]  # Designation names
+    scores = [row[1] for row in designation_counts]  # Counts
     page_size = session.get('page_size', default_page_size)
     search_term = request.args.get("search_term", "").strip()
+    selected_designation=request.args.get("designation")
+    selected_project=request.args.get("project")
+    selected_month=request.args.get("month")
     page = request.args.get("page", 1, type=int)
-
+    projects=["Akyrian","Auxo","Avanti","Bench","Fora Travels","Indihood","IPS","IQHive","LevelBlue","Web Development","Opus Clip","Training"]
+    designations=["Intern","Jr.QA Engineer","QA Engineer","Sr.QA Engineer","QA Lead"]
+    query=Dform.query
     if search_term:
-        entries = Dform.query.filter(func.lower(Dform.employee_name) == search_term.lower())
-    else:
-        entries = Dform.query
+        query = query.filter(func.lower(Dform.employee_name) == search_term.lower())
+    if selected_designation:
+        query=query.filter(Dform.designation == selected_designation)
+    if selected_project:
+        query = query.filter(func.lower(Dform.project) == selected_project.strip().lower())
+    if selected_month:
+        query=query.filter(extract('month', Dform.today_date) == int(selected_month))  
     
     if page_size:  # If 'All' is not selected, paginate based on page size
-        paginated_entries = entries.paginate(page=page, per_page=page_size, error_out=False)
+        paginated_entries = query.paginate(page=page, per_page=page_size, error_out=False)
     else:
         # Show all results if page size is 'All'
-        paginated_entries = entries.paginate(page=1, per_page=entries.count(), error_out=False)
+        paginated_entries = query.paginate(page=1, per_page=query.count(), error_out=False)
 
     # Prepare a list to hold the data for all entries
     data_list = []
@@ -645,14 +716,18 @@ def dmax_table():
     # Check if there are any entries
     if paginated_entries.items:
         # Use SQLAlchemy's metadata to get the columns in the order they are defined
-        columns = paginated_entries.items[0].__table__.columns.keys()  # Use the first entry to get column names
+        columns =['employee_name', 'production', 'quality', 'attendance', 'skill','Dmax_score']  # Use the first entry to get column names
         
         # Loop through each entry to create a dictionary for each row
         for entry in paginated_entries.items:
             data = {field: getattr(entry, field) for field in columns}  # Create a dict for each entry
             data_list.append(data)  # Add to the list
 
-    return render_template('dmax_table.html', data_list=data_list,pagination=paginated_entries, search_term=search_term,page_size=page_size,page_size_options=page_size_options)
+    top_scores = query.order_by(Dform.Dmax_score.desc()).limit(4).all()
+    chart_data = [{"name": entry.employee_name, "score": entry.Dmax_score} for entry in top_scores]
+    
+
+    return render_template('dmax_table.html', data_list=data_list,pagination=paginated_entries, search_term=search_term,page_size=page_size,page_size_options=page_size_options,chart_data=chart_data,selected_month=selected_month,selected_designation=selected_designation,selected_project=selected_project,projects=projects,designations=designations,labels=labels, scores=scores)
 
 @app.route("/team_dmax_table", methods=["GET", "POST"])
 def team_dmax_table():
@@ -669,6 +744,7 @@ def team_dmax_table():
                     "project":matched_employee.emp_project,
                     "designation":matched_employee.emp_designation,
                     "date":matched_employee.emp_date,
+                    "emp_id":matched_employee.emp_id,
                     "id":matched_employee.id
                 })
                 
@@ -684,27 +760,32 @@ def view_dscore():
         role = user_name['role']
         email=user_name['email']
         user_name=user_name['name'].lower()
+        search_query = request.args.get('search', '').strip().lower()
+        selected_date = request.args.get('date') 
+        selected_month = request.args.get('month')
         
-        print(user_name)
         if role =="manager":    
             employees_under_manager = Employee_information.query.filter(func.lower(Employee_information.reporting_manager)==user_name).all()
-            search_query = request.args.get('search', '').strip().lower()
-            selected_date = request.args.get('date') 
-            selected_month = request.args.get('month') 
             filtered_employees=[]
             for emp in employees_under_manager:
-                query = Dform.query.filter_by(employee_email=emp.emp_email)
-                if search_query:
-                    # Use = for exact match (case-sensitive)
-                    query = query.filter(func.lower(Dform.employee_name) == search_query)
+                matched_employees = get_filtered_employees(
+                    Dform.query.filter_by(employee_email=emp.emp_email),
+                    search_query,
+                    selected_month,
+                    selected_date
+                )
+                # query = Dform.query.filter_by(employee_email=emp.emp_email)
+                # if search_query:
+                #     # Use = for exact match (case-sensitive)
+                #     query = query.filter(func.lower(Dform.employee_name) == search_query)
                     
-                if selected_month:
-                    # Extract the month from today_date (assuming today_date is a datetime field)
-                    # please import extract in godaddy
-                   query = query.filter(extract('month', Dform.today_date) == int(selected_month))
-                if selected_date:
-                    query = query.filter_by(today_date=selected_date)
-                matched_employees = query.all()    
+                # if selected_month:
+                #     # Extract the month from today_date (assuming today_date is a datetime field)
+                #     # please import extract in godaddy
+                #    query = query.filter(extract('month', Dform.today_date) == int(selected_month))
+                # if selected_date:
+                #     query = query.filter_by(today_date=selected_date)
+                # matched_employees = query.all()    
                 if matched_employees:
                     for matched in matched_employees:
                         filtered_employees.append(
@@ -721,10 +802,51 @@ def view_dscore():
             return render_template("view_dscore.html",employees=filtered_employees,role=role,search_query=search_query, selected_month=selected_month, selected_date=selected_date)        
 
         if role=="crewmate":
-            query=Dform.query.filter_by(employee_email=email)
-            matched_employees=query.all()
+             
+            matched_employees = get_filtered_employees(
+                Dform.query.filter_by(employee_email=email),
+                search_query,
+                selected_month,
+                selected_date
+            )
+            filtered_employees=[]
             if matched_employees:
-                return "hhhhhhhhhhh"
+                for matched in matched_employees:
+                    filtered_employees.append(
+                            {
+                                "name":matched.employee_name,
+                                "email":matched.employee_email,
+                                "date":matched.today_date,
+                                "target":matched.target,
+                                "actual":matched.actual,
+                                "skill":matched.skill,
+                                "dscore":matched.Dmax_score
+                            }
+                        )
+                    
+
+            return render_template("view_dscore.html",employees=filtered_employees,role=role,search_query=search_query, selected_month=selected_month, selected_date=selected_date)                
+                
+        if role == "admin" or role == "super_admin":
+            filtered_employees = []
+            matched_employees = get_filtered_employees(
+                Dform.query,
+                search_query,
+                selected_month,
+                selected_date
+            )
+            if matched_employees:
+                for matched in matched_employees:
+                    filtered_employees.append({
+                        "name": matched.employee_name,
+                        "email": matched.employee_email,
+                        "date": matched.today_date,
+                        "target": matched.target,
+                        "actual": matched.actual,
+                        "skill": matched.skill,
+                        "dscore": matched.Dmax_score
+                    })
+            return render_template("view_dscore.html", employees=filtered_employees, role=role, search_query=search_query, selected_month=selected_month, selected_date=selected_date)
 
 
 
