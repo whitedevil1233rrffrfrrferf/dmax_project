@@ -4,7 +4,7 @@
     text-align: center;
 }
 .table {
-    width:95% !important;
+    width:125% !important;
     margin-left:1.9rem !important;
     table-layout:fixed; /* Fix the table layout */
     margin-left: auto;

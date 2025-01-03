@@ -7,7 +7,7 @@ from googleapiclient.discovery import build
 from google.oauth2 import service_account
 import json
 from datetime import datetime
-from sqlalchemy import extract, func
+from sqlalchemy import extract, func, or_
 import requests
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
@@ -57,9 +57,15 @@ app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///employees.db'
 app.config['SQLALCHEMY_BINDS']={
     'dform':'sqlite:///dform.db',
-    'emp_info':'sqlite:///empinfo.db'
+    'emp_info':'sqlite:///empinfo.db',
+    'op_excellence':'sqlite:///opexcellence.db'
 }
 db = SQLAlchemy(app)
+
+
+# helper functions -------
+
+
 
 
 
@@ -138,6 +144,7 @@ class Dform(db.Model):
     skill=db.Column(db.Integer)
     new_initiatives=db.Column(db.Integer)
     Dmax_score=db.Column(db.Integer)
+    
 
 # Employee Model
 class Employee(db.Model):
@@ -156,7 +163,48 @@ class Employee_information(db.Model):
     emp_date = db.Column(db.String(100),nullable=False)
     emp_project = db.Column(db.String(100),nullable=False)
     emp_designation = db.Column(db.String(100),nullable=False)
+    test_case_creation_target= db.Column(db.Integer)
+    test_case_updation_target=db.Column(db.Integer)
+    test_case_execution_target=db.Column(db.Integer)
+    defects_found_target=db.Column(db.Integer)
+    test_scripts_creation_target=db.Column(db.Integer)
+    test_scripts_updation_target=db.Column(db.Integer)
+    test_scripts_execution_target=db.Column(db.Integer)
+    site_Scrub_target=db.Column(db.Integer)
+    project_doc_target=db.Column(db.Integer)
+    internal_Review_target=db.Column(db.Integer)
+    regression_cycle_target=db.Column(db.Integer)
+    req_anal_target=db.Column(db.Integer)
+    end_cases_exec_target=db.Column(db.Integer)
+    task_coverage_score_target=db.Column(db.Integer)
+    assessment_score_target=db.Column(db.Integer)
+    assessment_re_score_target=db.Column(db.Integer)
+    cert_score_target=db.Column(db.Integer)
+    cert_re_score_target=db.Column(db.Integer)
+    new_features_imp_target=db.Column(db.Integer)
+    defects_fixed_target=db.Column(db.Integer)
+    enhancements_target=db.Column(db.Integer)
+    fig_desgns_target=db.Column(db.Integer)
+    doc_update_target=db.Column(db.Integer)
+    research_target=db.Column(db.Integer)
+    inv_defs=db.Column(db.Integer)
+    spel_errors=db.Column(db.Float)
+    client_esc=db.Column(db.Integer)
+    tst_cases_missing=db.Column(db.Integer)
+    att=db.Column(db.Integer)
+    dtouch=db.Column(db.Integer)
+    new_init=db.Column(db.Integer)
+    defects_verification_target=db.Column(db.Integer)
     reporting_manager=db.Column(db.String(100))
+
+class OperationalExcellence(db.Model):
+    __bind_key__="op_excellence"
+    
+    id = db.Column(db.Integer, primary_key=True)
+    emp_id = db.Column(db.String(100), nullable=False, unique=True)
+    attendance_score = db.Column(db.Float ,default=0.0)
+    dtouch_score = db.Column(db.Float,default=0.0)
+    new_init_score = db.Column(db.Float,default=0.0)
 
 
 def get_logged_in_user_details():
@@ -212,6 +260,10 @@ def custom_global_variable():
     # Return the role to all templates as a global variable
     return {'user_role': role}
 
+@app.template_filter('get_attr')
+def get_attr(obj, attr):
+    """Fetches an attribute from an object safely."""
+    return getattr(obj, attr, 'N/A')
 
 @app.route('/form',methods=["GET","POST"])
 def home():
@@ -327,6 +379,16 @@ def home():
         results = {}
 
         # Initialize the 'BL' sum as 0
+        operational_excellence=OperationalExcellence.query.filter_by(emp_id=form_data["employee_id"]).first()
+        if operational_excellence:
+            results['BP']=operational_excellence.attendance_score
+            results['BQ'] = operational_excellence.dtouch_score
+            results['BR'] = operational_excellence.new_init_score
+        else:
+            results['BP']=0   
+            results['BQ'] = 0
+            results['BR'] = 0 
+        print(results['BP'])     
         results['BL'] = 0
         results['BM'] = 0
         # Loop through the actual-to-target mapping and apply the formula
@@ -348,9 +410,12 @@ def home():
                 form_data['tst_cases_missing']  # BH: Test Cases Missing
             )       
             results['BO'] = ((100 - sum_invalid_defects_to_test_cases) * 0.4 / 100) * 100
-            results['BP'] = int((form_data['att'] * 1 * 10 / 100) * 100) 
-            results['BQ'] = int(((form_data['dtouch'] * 10 / 100 / 100) * 100)*100)
-            results['BR'] =int(((form_data['new_init'] * 10 / 100 / 100) * 100)*100)     
+            # results['BP'] = int((form_data['att'] * 1 * 10 / 100) * 100) 
+            # results['BP']=0
+            # results['BQ'] = int(((form_data['dtouch'] * 10 / 100 / 100) * 100)*100)
+            # results['BQ'] = 0
+            # results['BR'] =int(((form_data['new_init'] * 10 / 100 / 100) * 100)*100)  
+            # results['BR'] = 0   
             results['BS'] = sum(
                                 results[key] for key in [ 'BN', 'BO', 'BP', 'BQ', 'BR']
                             )
@@ -447,6 +512,7 @@ def home():
     
 @app.route('/',methods=["GET","POST"])
 def sign():
+    session.clear()
     if request.method=="POST":
         username = request.form["username"]  
         password = request.form["password"]
@@ -540,13 +606,13 @@ def search_employee():
     
     employees_list = []
     # Query the Login table where employee_name matches (case-insensitive search)
-    matched_employees = Dform.query.filter(Dform.employee_name.ilike(f'%{employee_name}%')).all() 
+    matched_employees = Employee_information.query.filter(Employee_information.emp_name.ilike(f'%{employee_name}%')).all() 
     for emp in matched_employees:
-        employee_info=Employee_information.query.filter(Employee_information.emp_id == emp.employee_id).first()
+        
     # Create a list of dictionaries containing employee details
-        if employee_info and employee_info.reporting_manager == logged_in_user_name:
+        if emp.reporting_manager == logged_in_user_name:
             # Include employee details in the response if the employee's reporting manager matches
-            employee_details = {column.name: getattr(emp, column.name) for column in Dform.__table__.columns}
+            employee_details = {column.name: getattr(emp, column.name) for column in Employee_information.__table__.columns}
             employees_list.append(employee_details)
     
     return jsonify({"employees": employees_list})
@@ -559,10 +625,20 @@ def register():
         role=request.form["role"]
         email=request.form["email"]
         name=request.form["name"]
-        existing_employee = Employee.query.filter_by(emp_id=username).first()
+        existing_employee = Employee.query.filter(
+            or_(
+                Employee.emp_id == username,
+                Employee.email == email,
+                Employee.name == name
+            )
+        ).first()
         if existing_employee:
-            
-            flash('Employee with that ID already exists', 'error')
+            if existing_employee.emp_id == username:
+                flash('Employee with that ID already exists', "danger")
+            elif existing_employee.email == email:
+                flash('Employee with that email already exists', "danger")
+            elif existing_employee.name == name:
+                flash('Employee with that name already exists', "danger")
             return redirect(url_for('register'))
         new_employee = Employee(emp_id=username, password=password, role=role,email=email,name=name)
         db.session.add(new_employee)
@@ -619,51 +695,112 @@ def edit_employee(employee_id):
 @app.route("/employee_upload" ,methods=['GET', 'POST'])
 def employee_upload():
     if request.method=="POST":
-        
-        file = request.files['file']  # Get the uploaded file
+        try:
+            file = request.files['file']  # Get the uploaded file
 
-        # Load the workbook directly from the file object
-        wb = load_workbook(file)  # No need for BytesIO here
-        ws = wb.active
+            # Load the workbook directly from the file object
+            wb = load_workbook(file)  # No need for BytesIO here
+            ws = wb.active
+            headers = [cell.value for cell in ws[1]]
+            column_mapping = {
+            "Employee Name":"emp_name",	
+            "Employee ID":	"emp_id",
+            "Employee Email":"emp_email", 
+            "Today's Date":"emp_date",	
+            "Select your Project":"emp_project",	
+            "Designation":"emp_designation",	 
+            "Testcase-Creation Target":"test_case_creation_target",
+            "Testcase-Updation Target":	"test_case_updation_target",
+            "Testcase-Execution Target":"test_case_execution_target",	
+            "Defects Found Target":	"defects_found_target",
+            "Issue Verification Target":"defects_verification_target",	
+            "Test-scripts-Creation - Target":"test_scripts_creation_target",
+            "Test-scripts-Updation - Target":"test_scripts_updation_target",	
+            "Test-scripts-Execution - Target":"test_scripts_execution_target",	
+            "Project Documentation - Target":"project_doc_target",	
+            "Internal Review - Target":	"internal_Review_target",
+            "Regression Cycle - Target":"regression_cycle_target",	
+            "Requirement analyzing/writing testcondition - Target":"req_anal_target",
+            "End-End test cases executed - Target":	"end_cases_exec_target",
+            "Site Scrub - Target"	:"site_Scrub_target",
+            "Task Achivement/Coverage score - Target":	"task_coverage_score_target",
+            "Assessment Test score - Target":"assessment_score_target",
+            "Assessment Retest score - Target"	:"assessment_re_score_target",
+            "Certification Test score - Target"	:"cert_score_target",
+            "Certification Retest score - Target":"cert_re_score_target",	
+            "New Features Implemented - Target":"new_features_imp_target",	
+            "Defects Fixed-Target":	"defects_fixed_target",
+            "Enhancements-Target":"enhancements_target",	
+            "Figma Designs-Created-Target":	"fig_desgns_target",
+            "Project Documentation Update-Target":"doc_update_target",
+            "Research-Target":"research_target",	
+            "Reporting Person":"reporting_manager"
+            # Add more mappings as per your Excel file
+            }
+            mapped_columns = {column_mapping[h]: idx for idx, h in enumerate(headers) if h in column_mapping}
+            processed_employees = set()
+            # Process the rows and add to the database
+            for row in ws.iter_rows(min_row=2, values_only=True):
+                employee_data = {db_field: row[idx] for db_field, idx in mapped_columns.items()}
+                if 'emp_name' in employee_data:
+                    emp_name = employee_data['emp_name']
+                    if emp_name is None:
+                        name_exists = False 
+                    else:
+                        # Check if employee already exists
+                        name_exists = db.session.query(
+                            db.session.query(Employee_information)
+                            .filter(func.lower(Employee_information.emp_name) == emp_name.lower())
+                            .exists()
+                        ).scalar()
 
-        # Process the rows and add to the database
-        for row in ws.iter_rows(min_row=2, values_only=True):
-            emp_name, emp_id, emp_email, emp_date, emp_project, emp_designation ,reporting_manager= row
-            if isinstance(emp_date, datetime):
-                emp_date = emp_date.date()  # Removes the time and keeps only the date
-                print("Date without time:", emp_date)
+                    # If employee already exists, flash the message
+                    if name_exists:
+                        if emp_name not in processed_employees:
+                            flash(f"Employee with name '{emp_name}' already exists. Skipping entry.", "danger")
+                            processed_employees.add(emp_name)  # Add to the set of processed employees
+                        continue  # Skip this entry since it's a duplicate
+                if 'emp_date' in employee_data:
+                    emp_date = employee_data['emp_date']
 
-            # If emp_date is a string, convert it to a date object
-            elif isinstance(emp_date, str):
-                try:
-                    emp_date = datetime.strptime(emp_date, '%Y-%m-%d').date()  # Convert to date
-                    print("Successfully parsed the date:", emp_date)
-                except ValueError:
-                    print("Incorrect date format")
-                    emp_date = None     
-            name_exists = db.session.query(
-                db.session.query(Employee_information).filter_by(emp_name=emp_name).exists()
-            ).scalar()
+                    if isinstance(emp_date, datetime):
+                        emp_date = emp_date.date()  # Removes the time and keeps only the date
+                        print("Date without time:", emp_date)
 
-            if name_exists:
-                print(f"Employee with name '{emp_name}' already exists. Skipping entry.")
-                continue
-            # Create new employee object
-            employee = Employee_information(
-                emp_name=emp_name,
-                emp_id=emp_id,
-                emp_email=emp_email,
-                emp_date=emp_date,
-                emp_project=emp_project,
-                emp_designation=emp_designation,
-                reporting_manager=reporting_manager
-            )
+                    # If emp_date is a string, convert it to a date object
+                    elif isinstance(emp_date, str):
+                        try:
+                            emp_date = datetime.strptime(emp_date, '%Y-%m-%d').date()  # Convert to date
+                            print("Successfully parsed the date:", emp_date)
+                        except ValueError:
+                            print("Incorrect date format")
+                            emp_date = None 
+                    if emp_date:
+                        try:
+                            db.session.query(Employee_information).update({"emp_date": emp_date})
+                            db.session.commit()
+                            flash(f"Updated emp_date for all employees to {emp_date}.", "success")
+                        except Exception as e:
+                            print(e)
+                            flash("Failed to update emp_date for existing employees.", "danger")          
+                            
+                if all(value is None for value in employee_data.values()):
+                    print("Skipping row with all None values")
+                    continue             
+                
+                
+            
+                employee = Employee_information(**employee_data)
 
-            # Add the employee record to the session
-            db.session.add(employee)
-        
-        # Commit all changes to the database
-        db.session.commit() 
+                # Add the employee record to the session
+                db.session.add(employee)
+            
+            # # Commit all changes to the database
+            db.session.commit() 
+            
+        except Exception as e:
+            print(e)   
+            flash("Failed to upload employees. Please check the sample file.", "danger")
     return render_template("employee_upload.html")
 
 @app.route("/dmax_table", methods=["GET", "POST"])
@@ -690,7 +827,10 @@ def dmax_table():
     search_term = request.args.get("search_term", "").strip()
     selected_designation=request.args.get("designation")
     selected_project=request.args.get("project")
-    selected_month=request.args.get("month")
+    selected_month = request.args.get("month", default=str(datetime.now().month - 1 if datetime.now().month > 1 else 12))
+    if not selected_month:
+        current_month = datetime.now().month
+        selected_month = str(current_month - 1 if current_month > 1 else 12)
     page = request.args.get("page", 1, type=int)
     projects=["Akyrian","Auxo","Avanti","Bench","Fora Travels","Indihood","IPS","IQHive","LevelBlue","Web Development","Opus Clip","Training"]
     designations=["Intern","Jr.QA Engineer","QA Engineer","Sr.QA Engineer","QA Lead"]
@@ -716,7 +856,7 @@ def dmax_table():
     # Check if there are any entries
     if paginated_entries.items:
         # Use SQLAlchemy's metadata to get the columns in the order they are defined
-        columns =['employee_name', 'production', 'quality', 'attendance', 'skill','Dmax_score']  # Use the first entry to get column names
+        columns =['employee_name','employee_id','project','designation','production', 'quality', 'attendance', 'skill','Dmax_score']  # Use the first entry to get column names
         
         # Loop through each entry to create a dictionary for each row
         for entry in paginated_entries.items:
@@ -731,10 +871,14 @@ def dmax_table():
 
 @app.route("/team_dmax_table", methods=["GET", "POST"])
 def team_dmax_table():
-    user_name = get_logged_in_user_details()
-    if user_name:
-        user_name=user_name['name']
-        employees_under_manager = Employee_information.query.filter_by(reporting_manager=user_name).all()
+    user_details = get_logged_in_user_details()
+    if user_details:
+        user_name=user_details['name']
+        role=user_details['role']
+        if role=="admin" or role=="super_admin":
+            employees_under_manager = Employee_information.query.all()
+        if role=="manager":    
+            employees_under_manager = Employee_information.query.filter_by(reporting_manager=user_name).all()
         filtered_employees = []
         for emp in employees_under_manager:
             matched_employee = Employee_information.query.filter_by(emp_email=emp.emp_email).first()
@@ -745,6 +889,7 @@ def team_dmax_table():
                     "designation":matched_employee.emp_designation,
                     "date":matched_employee.emp_date,
                     "emp_id":matched_employee.emp_id,
+                    "reporting_manager":matched_employee.reporting_manager,
                     "id":matched_employee.id
                 })
                 
@@ -755,10 +900,33 @@ def team_dmax_table():
 @app.route("/view_dscore", methods=["GET", "POST"])
 def view_dscore():
     user_name = get_logged_in_user_details()
+    ALLOWED_COLUMNS = [
+        "id","employee_name","target", "actual", "production",
+        "quality", "attendance", "skill", "new_initiatives", "Dmax_score"
+    ]
+    # ALLOWED_COLUMNS = [
+    #     "employee_name", "today_date", "test_case_creation_target",
+    #     "test_case_creation_actual", "test_case_updation_target", "test_case_updation_actual",
+    #     "test_case_execution_target", "test_case_execution_actual", "defects_found_target",
+    #     "defects_found_actual","defects_verification_target", "defects_verification_actual", "test_scripts_creation_target", "test_scripts_creation_actual",
+    #     "test_scripts_execution_target","test_scripts_execution_actual","test_scripts_updation_target", "test_scripts_updation_actual",
+    #     "site_Scrub_target", "site_Scrub_actual", "project_doc_target",
+    #     "project_doc_actual", "internal_Review_target", "internal_Review_actual", "regression_cycle_target",
+    #     "regression_cycle_actual", "req_anal_target", "req_anal_actual", "end_cases_exec_target",
+    #     "end_cases_exec_actual", "task_coverage_score_target", "task_coverage_score_actual",
+    #     "assessment_score_target", "assessment_score_actual", "assessment_re_score_target",
+    #     "assessment_re_score_actual", "cert_score_target", "cert_score_actual", "cert_re_score_target",
+    #     "cert_re_score_actual", "new_features_imp_target", "new_features_imp_actual", "defects_fixed_target",
+    #     "defects_fixed_actual", "enhancements_target", "enhancements_actual", "fig_desgns_target",
+    #     "fig_desgns_actual", "doc_update_target", "doc_update_actual", "research_target", "research_actual",
+    #     "inv_defs", "spel_errors", "client_esc", "tst_cases_missing", "att", "dtouch", "new_init", "target", "actual", "production",
+    #     "quality", "attendance", "skill", "new_initiatives", "Dmax_score"
+    # ]
+    
     if user_name:
         
         role = user_name['role']
-        email=user_name['email']
+        # email=user_name['email']
         user_name=user_name['name'].lower()
         search_query = request.args.get('search', '').strip().lower()
         selected_date = request.args.get('date') 
@@ -790,13 +958,8 @@ def view_dscore():
                     for matched in matched_employees:
                         filtered_employees.append(
                             {
-                                "name":matched.employee_name,
-                                "email":matched.employee_email,
-                                "date":matched.today_date,
-                                "target":matched.target,
-                                "actual":matched.actual,
-                                "skill":matched.skill,
-                                "dscore":matched.Dmax_score
+                                column: getattr(matched, column, None)  # Use getattr to get the attribute dynamically
+                                for column in ALLOWED_COLUMNS         # Filter by allowed columns
                             }
                         )
             return render_template("view_dscore.html",employees=filtered_employees,role=role,search_query=search_query, selected_month=selected_month, selected_date=selected_date)        
@@ -814,13 +977,8 @@ def view_dscore():
                 for matched in matched_employees:
                     filtered_employees.append(
                             {
-                                "name":matched.employee_name,
-                                "email":matched.employee_email,
-                                "date":matched.today_date,
-                                "target":matched.target,
-                                "actual":matched.actual,
-                                "skill":matched.skill,
-                                "dscore":matched.Dmax_score
+                                column: getattr(matched, column, None)  # Use getattr to get the attribute dynamically
+                                for column in ALLOWED_COLUMNS         # Filter by allowed columns
                             }
                         )
                     
@@ -837,19 +995,101 @@ def view_dscore():
             )
             if matched_employees:
                 for matched in matched_employees:
-                    filtered_employees.append({
-                        "name": matched.employee_name,
-                        "email": matched.employee_email,
-                        "date": matched.today_date,
-                        "target": matched.target,
-                        "actual": matched.actual,
-                        "skill": matched.skill,
-                        "dscore": matched.Dmax_score
-                    })
+                    filtered_employees.append(
+                            {
+                                column: getattr(matched, column, None)  # Use getattr to get the attribute dynamically
+                                for column in ALLOWED_COLUMNS         # Filter by allowed columns
+                            }
+                        )
             return render_template("view_dscore.html", employees=filtered_employees, role=role, search_query=search_query, selected_month=selected_month, selected_date=selected_date)
 
+@app.route('/delete_employee/<int:id>', methods=['POST'])
+def delete_employee(id):
+    employee = Employee_information.query.get(id)
+    if employee:
+        db.session.delete(employee)
+        db.session.commit()
+        flash('Employee deleted successfully!', 'success')
+    else:
+        flash('Employee not found.', 'danger')
+    return jsonify({'success': True})
 
+@app.route('/operational_excellence/<string:emp_id>', methods=['GET', 'POST'])
+def operational_excellence(emp_id):
+    employee_info = Employee_information.query.filter_by(emp_id=emp_id).first()
+    op_excellence=OperationalExcellence.query.filter_by(emp_id=emp_id).first()
+    if not op_excellence:
+        op_excellence = OperationalExcellence(
+            emp_id=emp_id,
+            attendance_score=0,
+            dtouch_score=0,
+            new_init_score=0
+        )
+        db.session.add(op_excellence)
+        db.session.commit()
+    
+    if employee_info:
+        designation = employee_info.emp_designation
+        if request.method == 'POST':
+            attendance=request.form.get('attendance')
+            dtouch = request.form.get('dtouch')
+            new_init=request.form.get('newInitiatives')
+            attendance =int(attendance)
+            dtouch=int(dtouch)   
+            new_init=int(new_init) 
+            if designation == "Intern":
+                attendance = int((attendance * 10 / 100) * 100)
+                dtouch = int(((attendance * 10 / 100 / 100) * 100) * 100)
+                new_init=0
+            if designation=="Jr.QA Engineer":
+                attendance = int((attendance * 5 / 100) * 100)
+                dtouch = int(((attendance * 10 / 100 / 100) * 100) * 100)
+                new_init=0
+            if designation=="QA Engineer":
+                attendance = int((attendance * 5 / 100) * 100)
+                dtouch = int(((attendance * 5 / 100 / 100) * 100) * 100)
+                new_init = int(((new_init * 15 / 100 / 100) * 100) * 100)
+            if designation=="Sr.QA Engineer":
+                attendance = int((attendance * 5 / 100) * 100)
+                dtouch = (((dtouch * 5 / 100 / 100) * 100) )
+                new_init = ((new_init * 20 / 100 / 100) * 100)
+                
+            if designation=="QA Lead":
+                attendance = int((attendance * 5 / 100) * 100)
+                dtouch = (((dtouch * 5 / 100 / 100) * 100) )    
+                new_init = ((new_init * 20 / 100 / 100) * 100)
+            op_excellence.attendance_score = attendance
+            op_excellence.dtouch_score = dtouch
+            op_excellence.new_init_score = new_init    
+            
+            db.session.commit()    
 
+            
+    return render_template('operational_excellence.html',emp_id=emp_id)
+
+@app.route("/full_table_view/<int:id>")
+def full_table_view(id):
+    employee = Dform.query.filter_by(id=id).first()
+    ALLOWED_COLUMNS = [
+        "employee_name", "today_date", "test_case_creation_target",
+        "test_case_creation_actual", "test_case_updation_target", "test_case_updation_actual",
+        "test_case_execution_target", "test_case_execution_actual", "defects_found_target",
+        "defects_found_actual","defects_verification_target", "defects_verification_actual", "test_scripts_creation_target", "test_scripts_creation_actual",
+        "test_scripts_execution_target","test_scripts_execution_actual","test_scripts_updation_target", "test_scripts_updation_actual",
+        # # "site_Scrub_target", "site_Scrub_actual", "project_doc_target",
+        # # "project_doc_actual", "internal_Review_target", "internal_Review_actual", "regression_cycle_target",
+        # # "regression_cycle_actual", "req_anal_target", "req_anal_actual", "end_cases_exec_target",
+        # # "end_cases_exec_actual", "task_coverage_score_target", "task_coverage_score_actual",
+        # # "assessment_score_target", "assessment_score_actual", "assessment_re_score_target",
+        # # "assessment_re_score_actual", "cert_score_target", "cert_score_actual", "cert_re_score_target",
+        # # "cert_re_score_actual", "new_features_imp_target", "new_features_imp_actual", "defects_fixed_target",
+        # # "defects_fixed_actual", "enhancements_target", "enhancements_actual", "fig_desgns_target",
+        # # "fig_desgns_actual", "doc_update_target", "doc_update_actual", "research_target", "research_actual",
+        "inv_defs",  "spel_errors",  "client_esc", "tst_cases_missing", "attendance","target","actual","production","quality","attendance","skill","new_initiatives","Dmax_score"
+        # "quality", "attendance", "skill", "new_initiatives", "Dmax_score"
+    ]
+    if employee:
+        return render_template("full_table_view.html", employee=employee, ALLOWED_COLUMNS=ALLOWED_COLUMNS)
 with app.app_context():
         
         db.create_all()

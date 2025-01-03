@@ -39,8 +39,9 @@
             <div class="mb-3">
                 <label for="emp_designation" class="form-label">Designation</label>
                 <select class="form-control" id="emp_designation" name="emp_designation">
+                    <option value="" disabled {% if not employee.emp_designation == designation %}selected{% endif %}>Select a designation</option>
                     {% for designation in designations %}
-                        <option value="{{ designation }}" {% if employee.emp_designation == designation %} selected {% endif %}>{{ designation }}</option>
+                        <option value="{{ designation }}" {% if employee.emp_designation == designation or employee.emp_designation.replace(' ', '').replace('.', '') == designation %} selected {% endif %}>{{ designation }}</option>
                     {% endfor %}
                 </select>
             </div>  
@@ -51,7 +52,7 @@
             
             <div style="display: flex; margin-left: 30%; gap: 4rem;">
                 <button type="submit" class="btn btn-primary" style=" padding:10px;width:6rem; height:3rem;">Submit</button>
-                <a class="btn btn-outline-secondary" href="{{url_for('employee_info')}}" style=" padding:10px;width:6rem; height:3rem;">
+                <a class="btn btn-outline-secondary" href="{{url_for('team_dmax_table')}}" style=" padding:10px;width:6rem; height:3rem;">
                     <div style="display: flex; justify-content: space-between; padding:5px;">
                         <div>
                             <i class="fa-solid fa-backward" style="margin-right: 10px;"></i>

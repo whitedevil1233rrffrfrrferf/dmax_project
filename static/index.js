@@ -32,7 +32,7 @@ function searchEmployee(){
                     var listItemStyle = "list-style: none ; color: black;";
                     listHtml += `<a href="#" data-employee='${encodeURIComponent(employeeDetails)}' onclick="selectEmployee(this)"><li style="${listItemStyle}">
                                     
-                                    ${employee.employee_name} (${employee.employee_id})
+                                    ${employee.emp_name} (${employee.emp_id})
                                     
                                  </li> </a>`;
                 });
@@ -64,19 +64,20 @@ function selectEmployee(element) {
         var employee = JSON.parse(employeeDetails);
         
         console.log(employeeDetails)
-        basic_details=[
-            'employee_name',
-            'employee_id',
-            'employee_email',
-            'project',
-            'designation'
-        ]
-        basic_details.forEach(function(detail){
-            var inputField=document.getElementById(detail)
-            if(inputField){
-                inputField.value=employee[detail]
+        var fieldMapping = {
+            'emp_name': 'employee_name',
+            'emp_id': 'employee_id',
+            'emp_email': 'employee_email',
+            'emp_project': 'project',
+            'emp_designation': 'designation'
+        };
+        
+        Object.keys(fieldMapping).forEach(function(dbField) {
+            var inputField = document.getElementById(fieldMapping[dbField]);
+            if (inputField) {
+                inputField.value = employee[dbField];
             }
-        })
+        });
         Object.keys(employee).forEach(function(key){
             if (key.endsWith('_target')){
                 var inputField=document.getElementById(key);
@@ -157,5 +158,21 @@ document.getElementById("myForm").addEventListener("keydown", function(event) {
         document.getElementById("employee-list").style.display = "none"; // Hide datalist
     }
 });
+
+document.getElementById("myForm").addEventListener("submit",function(){
+    event.preventDefault();
+
+            // Show confirmation popup
+            let confirmation = confirm("Are you sure you want to submit the form?");
+
+            if (confirmation) {
+                // If user clicks "OK", submit the form
+                alert("Form submitted successfully!");
+                this.submit(); // Programmatically submit the form
+            } else {
+                // If user clicks "Cancel", do nothing and keep form values
+                alert("Submission canceled.");
+            }    
+})
      
 

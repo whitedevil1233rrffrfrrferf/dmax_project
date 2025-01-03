@@ -8,7 +8,7 @@ new Chart(ctx, {
   data: {
     labels: labels,
     datasets: [{
-      label: '# of Votes',
+      label: 'Dmax Score',
       data: scores,
       backgroundColor: ['rgba(212, 253, 217, 0.8)',  // Light Blue
         'rgba(148, 223, 166, 0.8)',],

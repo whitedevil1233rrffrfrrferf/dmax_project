@@ -25,8 +25,9 @@
                 
                 <center>
                     
-                    <form class="d-flex col-9 my-2" action="{{ url_for('dmax_table') }}" role="search" method="GET" style="">
+                    <form class="d-flex col-9 my-2" action="{{ url_for('dmax_table') }}" role="search" method="GET" style="" id="search_form">
                         <input class="form-control me-2" type="search"  placeholder="Search by Name" name="search_term" id="search_term" aria-label="Search" value="{{ search_term }}" style="margin-right:2rem!important;">
+                        <input type="hidden" name="month" value="{{ selected_month }}" id="selected_month">
                         <button class="btn btn-primary" type="submit" >Search</button>
                         <button type="button" class="btn btn-danger" onclick="clearSearch()" style="margin-left: 2rem;">Clear</button>
                     </form>
@@ -77,11 +78,14 @@
                     <div class="graphBox">
                     
                         <div class="box">
+                            
                             <canvas id="myChart" >
                                 
                             </canvas>
+                            
                         </div>
                         <div class="box">
+                            <p style="text-align: center;">Overall count</p>
                             <canvas id="earning"></canvas>
                         </div>
                     </div>
@@ -166,7 +170,9 @@
         const desig_name = {{ labels | tojson }};
         const desig_Scores = {{ scores | tojson }};
     </script>
-    
+    <script>
+        
+    </script>
     <script src="{{ url_for('static', filename='my_chart.js') }}"></script>
     <script src="{{ url_for('static', filename='d_table.js') }}"></script>
 </body>

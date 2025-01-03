@@ -1,4 +1,4 @@
-function handleFilters() {
+    function handleFilters() {
     const designation=document.getElementById("designation").value
     
     const project=document.getElementById("project").value
